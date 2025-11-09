@@ -14,6 +14,7 @@ use App\Models\Student;
 use App\Services\OpenAIService;
 use App\Services\QuizService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class QuizzesController extends Controller
 {
@@ -22,6 +23,21 @@ class QuizzesController extends Controller
         private readonly QuizService $quizService,
         private readonly OpenAIService $openAIService,
     ) {
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $query = Quiz::query()
+            ->withCount('questions')
+            ->with('discipline:id,name,code');
+
+        if ($request->filled('discipline_id')) {
+            $query->where('discipline_id', $request->integer('discipline_id'));
+        }
+
+        return response()->json(
+            $query->latest()->get()
+        );
     }
 
     public function getQuiz(Quiz $quiz): JsonResponse

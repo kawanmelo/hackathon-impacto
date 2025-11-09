@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DisciplineController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QuizzesController;
@@ -13,6 +14,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::prefix('quizzes')->group(function () {
+        Route::get('/', [QuizzesController::class, 'index']);
         Route::get('/{quiz}/results/{student}', [QuizzesController::class, 'getResultsByQuiz']);
         Route::get('/{quiz}', [QuizzesController::class, 'getQuiz']);
         Route::get('/discipline/{discipline}/questions', [QuizzesController::class, 'listAllQuestionsByDiscipline']);
@@ -26,5 +28,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/buy', [ProductController::class, 'buy']);
     });
 
+    Route::get('/disciplines', [DisciplineController::class, 'index']);
     Route::get('/students/{student}', [StudentController::class, 'show']);
 });
