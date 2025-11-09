@@ -76,7 +76,7 @@ class QuizzesController extends Controller
                 ],
                 [
                     'score' => $isCorrect,
-                    'time_spent' => $answer['time_spent'] ?? null,
+                    'time_spent' => $answer['time_spent'] ?? 0,
                 ]
             );
         }
