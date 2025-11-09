@@ -4,11 +4,8 @@ namespace App\Services;
 
 use App\Clients\OpenAIClient;
 use App\Enums\ApiStatus;
-use App\Models\Question;
-use App\Models\Quiz;
 use App\Models\Student;
 use App\Models\StudentMetrics;
-use App\Models\StudentProfile;
 use App\Models\Discipline;
 use App\Models\QuestionResult;
 use App\Models\Group;
@@ -85,35 +82,105 @@ readonly class OpenAIService
 
     public function generateQuizReportForGroup(int $groupId): OperationResult
     {
-        $startDate = Carbon::now()->subDays(7);
+        $startDate = now()->subDays(7);
 
         $group = Group::with('students')->findOrFail($groupId);
 
-        $results = QuestionResult::with(['question', 'student'])
+        $results = QuestionResult::with(['question:id,id', 'quiz:id,title', 'student:id,name'])
             ->whereHas('student', fn($q) => $q->where('group_id', $groupId))
             ->where('created_at', '>=', $startDate)
             ->get();
 
+        if ($results->isEmpty()) {
+            return new OperationResult(
+                ApiStatus::Success->value,
+                Response::HTTP_OK,
+                'No quiz results found for this group in the selected period.',
+                []
+            );
+        }
+
         $groupedByQuiz = $results->groupBy('quiz_id')->map(function ($items, $quizId) {
-            $quiz = Quiz::find($quizId);
+            $quiz = $items->first()->quiz;
             $total = $items->count();
             $correct = $items->where('score', true)->count();
+            $averageTime = round($items->avg('time_spent'), 1);
+
+            // Questões mais acertadas (top 5)
+            $mostCorrect = $items
+                ->where('score', true)
+                ->groupBy('question_id')
+                ->map(fn($set) => $set->count())
+                ->sortDesc()
+                ->take(5)
+                ->mapWithKeys(fn($count, $qid) => [
+                    'Questão #' . $qid => $count
+                ]);
+
+            $mostMissed = $items
+                ->where('score', false)
+                ->groupBy('question_id')
+                ->map(fn($set) => $set->count())
+                ->sortDesc()
+                ->take(5)
+                ->mapWithKeys(fn($count, $qid) => [
+                    'Questão #' . $qid => $count
+                ]);
 
             return [
                 'quiz_id' => $quizId,
-                'title' => $quiz->title,
+                'title' => $quiz?->title ?? 'Sem título',
                 'accuracy_rate' => round(($correct / $total) * 100, 1),
-                'most_missed_questions' => $items
-                    ->where('score', false)
-                    ->groupBy('question_id')
-                    ->map->count()
-                    ->sortDesc()
-                    ->take(5)
-                    ->mapWithKeys(fn($count, $qid) => [
-                            Question::find($qid)->statement ?? 'Unknown question' => $count
-                    ]),
+                'average_time_spent' => $averageTime,
+                'most_correct_questions' => $mostCorrect,
+                'most_missed_questions' => $mostMissed,
             ];
         });
+
+        $studentRanking = $results
+            ->groupBy('student_id')
+            ->map(function ($items, $studentId) {
+                $student = $items->first()->student;
+                $totalAnswered = $items->count();
+                $totalCorrect = $items->where('score', true)->count();
+                $accuracyRate = $totalAnswered > 0
+                    ? round(($totalCorrect / $totalAnswered) * 100, 1)
+                    : 0;
+
+                return [
+                    'student_id' => $studentId,
+                    'name' => $student?->name ?? 'Sem nome',
+                    'accuracy_rate' => $accuracyRate,
+                    'total_answered' => $totalAnswered,
+                    'total_correct' => $totalCorrect,
+                ];
+            })
+            ->sortByDesc('accuracy_rate')
+            ->values();
+
+        $totalAnswers = $results->count();
+        $totalCorrectAnswers = $results->where('score', true)->count();
+        $groupAccuracyRate = round(($totalCorrectAnswers / $totalAnswers) * 100, 1);
+        $averageTimeOverall = round($results->avg('time_spent'), 1);
+
+        $questionStats = $results
+            ->groupBy('question_id')
+            ->map(fn($set) => [
+                'id' => $set->first()->question_id,
+                'total' => $set->count(),
+                'correct' => $set->where('score', true)->count(),
+                'accuracy' => round(($set->where('score', true)->count() / $set->count()) * 100, 1),
+            ]);
+
+        $hardestQuestion = $questionStats->sortBy('accuracy')->first();
+        $easiestQuestion = $questionStats->sortByDesc('accuracy')->first();
+
+        $quizStats = $groupedByQuiz->map(fn($quiz) => $quiz['accuracy_rate']);
+        $bestQuizId = $quizStats->sortDesc()->keys()->first();
+        $worstQuizId = $quizStats->sort()->keys()->first();
+
+        $bestQuiz = $groupedByQuiz[$bestQuizId] ?? null;
+        $worstQuiz = $groupedByQuiz[$worstQuizId] ?? null;
 
         $payload = [
             'period' => [
@@ -125,25 +192,36 @@ readonly class OpenAIService
                 'name' => $group->name,
                 'total_students' => $group->students->count(),
             ],
-            'quiz_performance' => $groupedByQuiz,
+            'group_metrics' => [
+                'average_accuracy_rate' => $groupAccuracyRate,
+                'average_time_spent' => $averageTimeOverall,
+                'hardest_question' => $hardestQuestion
+                    ? 'Questão #' . $hardestQuestion['id'] . ' (' . $hardestQuestion['accuracy'] . '% de acertos)'
+                    : null,
+                'easiest_question' => $easiestQuestion
+                    ? 'Questão #' . $easiestQuestion['id'] . ' (' . $easiestQuestion['accuracy'] . '% de acertos)'
+                    : null,
+                'best_quiz' => $bestQuiz
+                    ? $bestQuiz['title'] . ' (' . $bestQuiz['accuracy_rate'] . '%)'
+                    : null,
+                'worst_quiz' => $worstQuiz
+                    ? $worstQuiz['title'] . ' (' . $worstQuiz['accuracy_rate'] . '%)'
+                    : null,
+            ],
+            'quiz_metrics' => $groupedByQuiz,
+            'student_ranking' => $studentRanking,
         ];
-
-        $prompt = config('prompts.generate_group_report');
-
-        $response = $this->client->generateChatResponse(
-            'gpt-5-nano',
-            $this->buildInput($payload),
-            $prompt,
-            true
-        );
 
         return new OperationResult(
             ApiStatus::Success->value,
             Response::HTTP_OK,
-            'Group quiz report generated successfully.',
-            [$this->concatResponse($response)]
+            'Group performance metrics generated successfully.',
+            $payload
         );
     }
+
+
+
 
 
     public function concatResponse(array $response): string
