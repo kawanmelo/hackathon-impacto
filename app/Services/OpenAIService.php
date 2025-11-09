@@ -27,7 +27,7 @@ readonly class OpenAIService
 
         $turma = Group::with('metrics')->findOrFail($turmaId);
 
-        $alunos = Student::with(['metricas', 'perfil'])
+        $alunos = Student::with(['metrics'])
             ->where('group_id', $turmaId)
             ->get();
 
@@ -39,7 +39,7 @@ readonly class OpenAIService
             ->where('created_at', '>=', $dataInicio)
             ->get();
 
-        $resultados = QuestionResult::with(['aluno', 'desafio.disciplina'])
+        $resultados = QuestionResult::with(['student', 'question.discipline'])
             ->whereHas('student', fn($q) => $q->where('group_id', $turmaId))
             ->where('created_at', '>=', $dataInicio)
             ->get();
@@ -54,13 +54,31 @@ readonly class OpenAIService
                 'inicio' => $dataInicio->toDateString(),
                 'fim' => now()->toDateString(),
             ],
-            'turma' => $turma,
-            'turma_metricas' => $turmaMetricas,
-            'alunos' => $alunos,
-            'aluno_metricas' => $alunoMetricas,
-            'disciplinas' => $disciplinas,
-            'resultados_desafios' => $resultados,
+            'turma' => [
+                'id' => $turma->id,
+                'nome' => $turma->name,
+                'total_alunos' => $alunos->count(),
+            ],
+            'metricas_turma' => [
+                'media_acertos' => round($turmaMetricas->avg('accuracy_rate'), 1),
+                'media_tempo' => round($turmaMetricas->avg('average_time_spent'), 1),
+            ],
+            'ranking_alunos' => $alunos->map(function ($a) use ($alunoMetricas) {
+                $m = $alunoMetricas->where('student_id', $a->id);
+                return [
+                    'id' => $a->id,
+                    'nome' => $a->name,
+                    'acertos' => round($m->avg('accuracy_rate'), 1),
+                    'tempo_medio' => round($m->avg('average_time_spent'), 1),
+                ];
+            })->sortByDesc('acertos')->values(),
+            'disciplinas' => $disciplinas->map(fn($d) => [
+                'id' => $d->id,
+                'nome' => $d->name,
+                'total_questoes' => $d->questions->count(),
+            ]),
         ];
+
 
 
         $prompt = config('prompts.gerar-relatorio-semanal');
