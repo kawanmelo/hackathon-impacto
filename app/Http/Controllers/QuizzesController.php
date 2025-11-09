@@ -54,8 +54,6 @@ class QuizzesController extends Controller
         $quizId = $request->validated()['quiz_id'];
         $answers = $request->validated()['answers'];
 
-        $quiz = Quiz::with('questions.alternatives')->findOrFail($quizId);
-
         $correctCount = 0;
         $total = count($answers);
 
@@ -85,14 +83,31 @@ class QuizzesController extends Controller
 
         $scorePercent = (int)(($correctCount / $total) * 100);
 
+        $coinsPerCorrect = 10;
+        $bonusAbove80 = 20;
+
+        $coinsEarned = $correctCount * $coinsPerCorrect;
+
+        if ($scorePercent > 80) {
+            $coinsEarned += $bonusAbove80;
+        }
+
+        $student = Student::findOrFail($studentId);
+        $student->coins += $coinsEarned;
+        $student->save();
+
         return response()->json([
             'quiz_id' => $quizId,
             'student_id' => $studentId,
             'correct_answers' => $correctCount,
             'total_questions' => $total,
             'score_percent' => $scorePercent,
+            'coins_earned' => $coinsEarned,
+            'total_coins' => $student->coins,
             'success_rate' => "{$scorePercent}%",
-            'message' => $scorePercent >= 70 ? 'Parabéns, ótimo desempenho!' : 'Continue praticando!',
+            'message' => $scorePercent >= 70
+                ? 'Parabéns, ótimo desempenho! Você ganhou ' . $coinsEarned . ' moedas!'
+                : 'Continue praticando! Você ganhou ' . $coinsEarned . ' moedas.',
         ]);
     }
 

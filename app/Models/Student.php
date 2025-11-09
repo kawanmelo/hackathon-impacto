@@ -17,7 +17,8 @@ class Student extends Authenticatable
     protected $fillable = [
         'turma_id',
         'nome',
-        'email'
+        'email',
+        'coins'
     ];
 
     protected $hidden = [

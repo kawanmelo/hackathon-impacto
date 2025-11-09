@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GroupController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QuizzesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -17,5 +18,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/', [QuizzesController::class, 'create']);
         Route::post('/submit', [QuizzesController::class, 'submit']);
         Route::post('{group}/generate-group-report', [QuizzesController::class, 'generateGroupReport']);
+    });
+
+    Route::prefix('products')->group(function () {
+        Route::get('/', [ProductController::class, 'listProducts']);
+        Route::post('/buy', [ProductController::class, 'buy']);
     });
 });
