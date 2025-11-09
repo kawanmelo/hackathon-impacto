@@ -28,3 +28,5 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+yarn.lock
+npm-debug.log

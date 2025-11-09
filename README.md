@@ -1,59 +1,117 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# AurellIA API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend Laravel que abastece a plataforma AurellIA com jornadas gamificadas, quizzes personalizados, marketplace solidário e relatórios com IA para professores e gestores.
 
-## About Laravel
+## ✨ Principais Recursos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Quizzes dinâmicos** – professores montam quizzes selecionando perguntas de cada disciplina; alunos respondem e recebem moedas.
+- **Marketplace solidário** – catálogo de recompensas gerido pela API, com compras validadas pelo saldo real do estudante.
+- **Relatórios inteligentes** – endpoints integrados ao OpenAI Service geram análises por turma ou grupo.
+- **Integração multi‐perfil** – rotas para estudantes, professores, gestores e marketplace mantendo os mesmos dados usados no frontend AurellIA.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🧱 Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2 + Laravel 12
+- PostgreSQL/MySQL (configure via `.env`)
+- Vite + npm/yarn para assets (quando necessário)
+- Docker/Docker Compose opcionais para desenvolvimento rápido
 
-## Learning Laravel
+## ✅ Pré‑requisitos
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- PHP 8.2+
+- Composer 2.x
+- Node.js 18+ e npm (ou yarn) – apenas se for compilar assets com Vite
+- Banco de dados compatível (MySQL, MariaDB ou PostgreSQL)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🚀 Setup Rápido
 
-## Laravel Sponsors
+```bash
+# 1. Instale dependências PHP
+composer install
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# 2. Copie o .env e configure DB, FRONTEND_URL e chaves da OpenAI
+cp .env.example .env
+php artisan key:generate
 
-### Premium Partners
+# 3. Rode as migrações (adicione --seed se tiver seeders prontos)
+php artisan migrate
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# 4. Instale dependências JS (apenas se precisar do build do Vite)
+npm install
+npm run build   # ou npm run dev para hot reload
 
-## Contributing
+# 5. Suba o servidor
+php artisan serve
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Usando Docker
 
-## Code of Conduct
+```bash
+docker compose up --build
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+O arquivo `docker-compose.yml` já sobe PHP, banco e nginx conforme configurado.
 
-## Security Vulnerabilities
+## 🔧 Scripts Úteis
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+| Comando | Descrição |
+| --- | --- |
+| `composer setup` | Instala dependências, gera `.env`, roda `migrate` e build do Vite |
+| `composer dev` | Executa servidor Laravel, fila, logs e Vite em paralelo |
+| `composer test` | Limpa cache e roda `php artisan test` |
+| `npm run dev` | Servidor Vite com HMR |
+| `npm run build` | Build de assets para produção |
 
-## License
+## 🌐 Variáveis de Ambiente
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Variável | Descrição |
+| --- | --- |
+| `APP_URL` | URL pública da API |
+| `FRONTEND_URL` | Origem liberada no CORS (ex.: `http://localhost:3000`) |
+| `DB_*` | Configurações do banco |
+| `OPENAI_API_KEY`/`services.openai.*` | Chaves usadas pelo `OpenAIService` |
+
+## 📡 Endpoints Principais (prefixo `/api/v1`)
+
+| Método / Rota | Descrição |
+| --- | --- |
+| `GET /disciplines` | Lista disciplinas disponíveis |
+| `GET /quizzes` | Lista quizzes (filtro `discipline_id` opcional) |
+| `GET /quizzes/{quiz}` | Detalha quiz com perguntas e alternativas |
+| `POST /quizzes` | Cria quiz (payload com `discipline_id`, `title`, `questions[]`) |
+| `POST /quizzes/submit` | Submissão de respostas do aluno |
+| `GET /quizzes/{quiz}/results/{student}` | Resultados de um aluno em um quiz |
+| `GET /quizzes/discipline/{discipline}/questions` | Perguntas disponíveis para montar quizzes |
+| `POST /quizzes/{group}/generate-group-report` | Estatísticas agregadas da turma |
+| `POST /groups/{group}` | Relatório narrativo semanal via IA |
+| `GET /products` / `POST /products/buy` | Catálogo e compra do marketplace |
+| `GET /students/{student}` | Perfil e saldo de moedas do estudante |
+
+Todas as rotas estão registradas em `routes/api.php` e herdam os cabeçalhos de CORS do middleware `App\Http\Middleware\CorsMiddleware`.
+
+## 📂 Estrutura de Pastas
+
+- `app/` – controllers, services (OpenAI, QuizService), models e middleware
+- `database/migrations` – schema para quizzes, perguntas, produtos, métricas etc.
+- `routes/api.php` – todas as rotas REST expostas para o frontend AurellIA
+- `config/prompts.php` – templates usados pelos relatórios com IA
+
+## 🧪 Testes
+
+```bash
+php artisan test
+# ou
+composer test
+```
+
+Use `php artisan test --filter=NomeDoTeste` para executar casos específicos.
+
+## 🤝 Contribuição
+
+1. Faça um fork e crie sua branch feature (`git checkout -b feature/nova-funcionalidade`)
+2. Garanta que testes e lint passam (`composer test`)
+3. Abra um PR descrevendo claramente a mudança
+
+## 📄 Licença
+
+Projeto licenciado sob **MIT**. Veja o arquivo `LICENSE` ou o cabeçalho padrão do Laravel para mais detalhes.
